@@ -334,6 +334,18 @@
   align-items: center;
 }
 
+.pdf-pages-container-dual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  justify-items: center;
+  align-items: start;
+}
+
+.pdf-pages-container-dual > .pdf-page-container {
+  margin-bottom: 0;
+}
+
 .pdf-page-container {
   position: relative;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);

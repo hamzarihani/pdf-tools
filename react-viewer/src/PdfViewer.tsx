@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Moon, Sun, Info, Download, Printer, Maximize, Minimize, MoreVertical, Loader2, RotateCw, RotateCcw, PanelLeft } from './icons';
+import { Search, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Moon, Sun, Info, Download, Printer, Maximize, Minimize, MoreVertical, Loader2, RotateCw, RotateCcw, PanelLeft, BookOpen, FileText } from './icons';
 import * as pdfjsLib from 'pdfjs-dist';
 import './styles.css';
 
@@ -52,6 +52,7 @@ interface PdfPageRendererProps {
   wrapperWidth: number;
   onRenderComplete?: () => void;
   rotation: number;
+  viewMode: 'single' | 'dual';
 }
 
 const PdfPageRenderer: React.FC<PdfPageRendererProps> = ({
@@ -61,6 +62,7 @@ const PdfPageRenderer: React.FC<PdfPageRendererProps> = ({
   activeSearch,
   wrapperWidth,
   rotation,
+  viewMode,
   onRenderComplete,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -106,7 +108,12 @@ const PdfPageRenderer: React.FC<PdfPageRendererProps> = ({
 
   if (viewport100) {
     if (zoom === 'auto') {
-      currentTargetWidth = (wrapperWidth || 800) - 40;
+      const containerWidth = wrapperWidth || 800;
+      let availableWidth = containerWidth - 40;
+      if (viewMode === 'dual') {
+        availableWidth = (containerWidth - 60) / 2;
+      }
+      currentTargetWidth = availableWidth;
     } else {
       currentTargetWidth = viewport100.width * (zoom / 100);
     }
@@ -127,7 +134,11 @@ const PdfPageRenderer: React.FC<PdfPageRendererProps> = ({
         let scale = 1.0;
         if (zoom === 'auto') {
           const containerWidth = wrapperWidth || 800;
-          scale = (containerWidth - 40) / viewport100.width;
+          let availableWidth = containerWidth - 40;
+          if (viewMode === 'dual') {
+            availableWidth = (containerWidth - 60) / 2;
+          }
+          scale = availableWidth / viewport100.width;
         } else {
           scale = zoom / 100;
         }
@@ -212,7 +223,7 @@ const PdfPageRenderer: React.FC<PdfPageRendererProps> = ({
     }, 150);
     
     return () => clearTimeout(renderTimeoutRef.current);
-  }, [pdfDoc, pageNumber, zoom, activeSearch, isVisible, wrapperWidth, rotation, onRenderComplete, viewport100]);
+  }, [pdfDoc, pageNumber, zoom, activeSearch, isVisible, wrapperWidth, rotation, viewMode, onRenderComplete, viewport100]);
 
   const isScaling = currentTargetWidth && renderedWidth && Math.abs(currentTargetWidth - renderedWidth) > 1;
 
@@ -362,6 +373,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
   const [activeSearch, setActiveSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
+  const [viewMode, setViewMode] = useState<'single' | 'dual'>('single');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [wrapperWidth, setWrapperWidth] = useState(800);
@@ -703,6 +715,9 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
                 <button onClick={() => { setIsDark(!isDark); setShowMoreMenu(false); }} className="pdf-more-menu-item">
                   {isDark ? <Sun size={16} /> : <Moon size={16} />} {isDark ? dict.lightMode : dict.darkMode}
                 </button>
+                <button onClick={() => { setViewMode(viewMode === 'single' ? 'dual' : 'single'); setShowMoreMenu(false); }} className="pdf-more-menu-item">
+                  {viewMode === 'single' ? <BookOpen size={16} /> : <FileText size={16} />} {viewMode === 'single' ? 'Dual Page View' : 'Single Page View'}
+                </button>
                 <button onClick={() => { handleRotateCcw(); setShowMoreMenu(false); }} className="pdf-more-menu-item">
                   <RotateCcw size={16} /> {dict.rotateCcw}
                 </button>
@@ -749,7 +764,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
             <p className="pdf-loading-text">{dict.loadingDocument}</p>
           </div>
         )}
-        <div className="pdf-pages-container">
+        <div className={`pdf-pages-container ${viewMode === 'dual' ? 'pdf-pages-container-dual' : ''}`}>
           {pdfDoc && Array.from({ length: totalPages }, (_, i) => (
             <PdfPageRenderer
               key={i + 1}
@@ -759,6 +774,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
               activeSearch={activeSearch}
               wrapperWidth={wrapperWidth}
               rotation={rotation}
+              viewMode={viewMode}
               onRenderComplete={i === 0 ? () => setIsLoading(false) : undefined}
             />
           ))}
