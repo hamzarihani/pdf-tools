@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Moon, Sun, Info, Download, Printer, Maximize, Minimize, MoreVertical, Loader2, RotateCw, RotateCcw, PanelLeft, BookOpen, FileText } from './icons';
+import { Search, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Moon, Sun, Info, Download, Printer, Maximize, Minimize, MoreVertical, Loader2, RotateCw, RotateCcw, PanelLeft, BookOpen, FileText, Columns } from './icons';
 import * as pdfjsLib from 'pdfjs-dist';
 import './styles.css';
 
@@ -374,6 +374,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
   const [showSearch, setShowSearch] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [viewMode, setViewMode] = useState<'single' | 'dual'>('single');
+  const [isBookMode, setIsBookMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [wrapperWidth, setWrapperWidth] = useState(800);
@@ -431,12 +432,23 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
   const scrollToPage = (pageNum: number) => {
     setPage(pageNum);
-    const element = document.getElementById(`pdf-page-${pageNum}`);
-    if (element && wrapperRef.current) {
-      wrapperRef.current.scrollTo({
-        top: element.offsetTop - 16,
-        behavior: 'smooth'
-      });
+    if (!wrapperRef.current) return;
+
+    const itemIndex = viewMode === 'dual' ? Math.floor((pageNum - 1) / 2) : pageNum - 1;
+    const element = document.getElementById(`pdf-item-${itemIndex}`);
+
+    if (element) {
+      if (isBookMode) {
+        wrapperRef.current.scrollTo({
+          left: element.offsetLeft,
+          behavior: 'smooth'
+        });
+      } else {
+        wrapperRef.current.scrollTo({
+          top: element.offsetTop - 16,
+          behavior: 'smooth'
+        });
+      }
     }
   };
 
@@ -557,6 +569,13 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
             title="Toggle Thumbnails"
           >
             <PanelLeft size={18} />
+          </button>
+          <button 
+            onClick={() => setIsBookMode(!isBookMode)}
+            className={`pdf-btn ${isBookMode ? 'pdf-btn-active' : ''}`}
+            title="Toggle Book Mode"
+          >
+            <BookOpen size={18} />
           </button>
           <div className="pdf-divider"></div>
           <div className="pdf-search-container">
@@ -715,8 +734,11 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
                 <button onClick={() => { setIsDark(!isDark); setShowMoreMenu(false); }} className="pdf-more-menu-item">
                   {isDark ? <Sun size={16} /> : <Moon size={16} />} {isDark ? dict.lightMode : dict.darkMode}
                 </button>
+                <button onClick={() => { setIsBookMode(!isBookMode); setShowMoreMenu(false); }} className="pdf-more-menu-item">
+                  <BookOpen size={16} /> {isBookMode ? 'Disable Book Mode' : 'Enable Book Mode'}
+                </button>
                 <button onClick={() => { setViewMode(viewMode === 'single' ? 'dual' : 'single'); setShowMoreMenu(false); }} className="pdf-more-menu-item">
-                  {viewMode === 'single' ? <BookOpen size={16} /> : <FileText size={16} />} {viewMode === 'single' ? 'Dual Page View' : 'Single Page View'}
+                  {viewMode === 'single' ? <Columns size={16} /> : <FileText size={16} />} {viewMode === 'single' ? 'Dual Page View' : 'Single Page View'}
                 </button>
                 <button onClick={() => { handleRotateCcw(); setShowMoreMenu(false); }} className="pdf-more-menu-item">
                   <RotateCcw size={16} /> {dict.rotateCcw}
@@ -757,27 +779,52 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
             />
           ))}
         </div>
-        <div ref={wrapperRef} className="pdf-content-wrapper">
+        <div ref={wrapperRef} className={`pdf-content-wrapper ${isBookMode ? 'pdf-content-wrapper-book' : ''}`}>
           {isLoading && (
           <div className="pdf-loading-overlay">
             <Loader2 className="pdf-spinner" />
             <p className="pdf-loading-text">{dict.loadingDocument}</p>
           </div>
         )}
-        <div className={`pdf-pages-container ${viewMode === 'dual' ? 'pdf-pages-container-dual' : ''}`}>
-          {pdfDoc && Array.from({ length: totalPages }, (_, i) => (
-            <PdfPageRenderer
-              key={i + 1}
-              pdfDoc={pdfDoc}
-              pageNumber={i + 1}
-              zoom={zoom}
-              activeSearch={activeSearch}
-              wrapperWidth={wrapperWidth}
-              rotation={rotation}
-              viewMode={viewMode}
-              onRenderComplete={i === 0 ? () => setIsLoading(false) : undefined}
-            />
-          ))}
+        <div className={`pdf-pages-container ${isBookMode ? 'pdf-pages-container-horizontal' : 'pdf-pages-container-vertical'}`}>
+          {pdfDoc && Array.from({ length: viewMode === 'dual' ? Math.ceil(totalPages / 2) : totalPages }, (_, index) => {
+            const isDual = viewMode === 'dual';
+            const p1 = isDual ? index * 2 + 1 : index + 1;
+            const p2 = isDual && (p1 + 1 <= totalPages) ? p1 + 1 : null;
+            
+            return (
+              <div 
+                key={`item-${index}`} 
+                className={isBookMode ? 'pdf-spread-horizontal' : 'pdf-spread-vertical'} 
+                id={`pdf-item-${index}`}
+                style={isBookMode ? { minWidth: wrapperWidth ? `${wrapperWidth}px` : '100%', width: 'max-content' } : {}}
+              >
+                <PdfPageRenderer
+                  key={p1}
+                  pdfDoc={pdfDoc}
+                  pageNumber={p1}
+                  zoom={zoom}
+                  activeSearch={activeSearch}
+                  wrapperWidth={wrapperWidth}
+                  rotation={rotation}
+                  viewMode={viewMode}
+                  onRenderComplete={index === 0 ? () => setIsLoading(false) : undefined}
+                />
+                {p2 && (
+                  <PdfPageRenderer
+                    key={p2}
+                    pdfDoc={pdfDoc}
+                    pageNumber={p2}
+                    zoom={zoom}
+                    activeSearch={activeSearch}
+                    wrapperWidth={wrapperWidth}
+                    rotation={rotation}
+                    viewMode={viewMode}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
       </div>
