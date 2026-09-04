@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Moon, Sun, Info, Download, Printer, Maximize, Minimize, MoreVertical, Loader2, RotateCw, RotateCcw } from './icons';
+import { Search, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Moon, Sun, Info, Download, Printer, Maximize, Minimize, MoreVertical, Loader2, RotateCw, RotateCcw, PanelLeft } from './icons';
 import * as pdfjsLib from 'pdfjs-dist';
 import './styles.css';
 
@@ -60,11 +60,203 @@ const PdfPageRenderer: React.FC<PdfPageRendererProps> = ({
   zoom,
   activeSearch,
   wrapperWidth,
-  onRenderComplete,
   rotation,
+  onRenderComplete,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
+  const renderTaskRef = useRef<pdfjsLib.RenderTask | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [viewport100, setViewport100] = useState<any>(null);
+  const [renderedWidth, setRenderedWidth] = useState<number | null>(null);
+  const renderTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { rootMargin: '800px 0px', threshold: 0 }
+    );
+    
+    if (containerRef.current) observer.observe(containerRef.current);
+    
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    pdfDoc.getPage(pageNumber).then(pageObj => {
+      if (!active) return;
+      const baseRotation = pageObj.rotate || 0;
+      const finalRotation = (baseRotation + rotation) % 360;
+      setViewport100(pageObj.getViewport({ scale: 1.0, rotation: finalRotation }));
+    });
+    return () => { active = false; };
+  }, [pdfDoc, pageNumber, rotation]);
+
+  let currentTargetWidth: number | undefined = undefined;
+  let currentTargetHeight: number | undefined = undefined;
+
+  if (viewport100) {
+    if (zoom === 'auto') {
+      currentTargetWidth = (wrapperWidth || 800) - 40;
+    } else {
+      currentTargetWidth = viewport100.width * (zoom / 100);
+    }
+    currentTargetHeight = currentTargetWidth * (viewport100.height / viewport100.width);
+  }
+
+  useEffect(() => {
+    if (renderTimeoutRef.current) clearTimeout(renderTimeoutRef.current);
+    
+    renderTimeoutRef.current = setTimeout(async () => {
+      if (!isVisible || !canvasRef.current || !viewport100) return;
+      
+      try {
+        const pageObj = await pdfDoc.getPage(pageNumber);
+        const baseRotation = pageObj.rotate || 0;
+        const finalRotation = (baseRotation + rotation) % 360;
+        
+        let scale = 1.0;
+        if (zoom === 'auto') {
+          const containerWidth = wrapperWidth || 800;
+          scale = (containerWidth - 40) / viewport100.width;
+        } else {
+          scale = zoom / 100;
+        }
+        
+        const viewport = pageObj.getViewport({ scale, rotation: finalRotation });
+        
+        const hiddenCanvas = document.createElement('canvas');
+        hiddenCanvas.width = viewport.width;
+        hiddenCanvas.height = viewport.height;
+        const hiddenContext = hiddenCanvas.getContext('2d');
+        if (!hiddenContext) return;
+        
+        if (renderTaskRef.current) {
+          renderTaskRef.current.cancel();
+        }
+        
+        const renderTask = pageObj.render({
+          canvasContext: hiddenContext,
+          viewport: viewport,
+        });
+        renderTaskRef.current = renderTask;
+        await renderTask.promise;
+        
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const context = canvas.getContext('2d');
+        context?.drawImage(hiddenCanvas, 0, 0);
+        
+        if (textLayerRef.current) {
+          textLayerRef.current.innerHTML = '';
+          textLayerRef.current.style.width = `${viewport.width}px`;
+          textLayerRef.current.style.height = `${viewport.height}px`;
+        }
+
+        if (onRenderComplete) {
+          onRenderComplete();
+        }
+
+        if (activeSearch && textLayerRef.current) {
+          const textContent = await pageObj.getTextContent();
+          const searchLower = activeSearch.toLowerCase();
+          
+          textContent.items.forEach((item: any) => {
+            if (item.str) {
+              const itemStrLower = item.str.toLowerCase();
+              let startIndex = 0;
+              let matchIndex = itemStrLower.indexOf(searchLower, startIndex);
+
+              while (matchIndex !== -1) {
+                const [x, y] = viewport.convertToViewportPoint(item.transform[4], item.transform[5]);
+                const fullWidth = item.width * viewport.scale;
+                const height = Math.abs(item.transform[3]) * viewport.scale * 1.2; 
+                
+                const charWidth = fullWidth / item.str.length;
+                const matchOffsetLeft = matchIndex * charWidth;
+                const matchWidth = searchLower.length * charWidth;
+                
+                const div = document.createElement('div');
+                div.className = 'pdf-search-highlight';
+                div.style.left = `${x + matchOffsetLeft}px`;
+                div.style.top = `${y - (height * 0.8)}px`; 
+                div.style.width = `${matchWidth}px`;
+                div.style.height = `${height}px`;
+                
+                textLayerRef.current?.appendChild(div);
+
+                startIndex = matchIndex + searchLower.length;
+                matchIndex = itemStrLower.indexOf(searchLower, startIndex);
+              }
+            }
+          });
+        }
+        
+        setRenderedWidth(viewport.width);
+      } catch (err: any) {
+        if (err.name !== 'RenderingCancelledException') {
+          console.error('Render error:', err);
+        }
+      }
+    }, 150);
+    
+    return () => clearTimeout(renderTimeoutRef.current);
+  }, [pdfDoc, pageNumber, zoom, activeSearch, isVisible, wrapperWidth, rotation, onRenderComplete, viewport100]);
+
+  const isScaling = currentTargetWidth && renderedWidth && Math.abs(currentTargetWidth - renderedWidth) > 1;
+
+  return (
+    <div 
+      ref={containerRef} 
+      id={`pdf-page-${pageNumber}`} 
+      className="pdf-page-container" 
+      data-page-number={pageNumber}
+      style={{
+        width: currentTargetWidth ? `${currentTargetWidth}px` : undefined,
+        height: currentTargetHeight ? `${currentTargetHeight}px` : undefined
+      }}
+    >
+      <canvas 
+        ref={canvasRef} 
+        className="pdf-canvas" 
+        style={{ width: '100%', height: '100%' }}
+      />
+      <div 
+        ref={textLayerRef} 
+        className="pdf-text-layer" 
+        style={{ display: isScaling ? 'none' : 'block' }}
+      />
+    </div>
+  );
+};
+
+interface PdfThumbnailRendererProps {
+  pdfDoc: pdfjsLib.PDFDocumentProxy;
+  pageNumber: number;
+  rotation: number;
+  isActive: boolean;
+  onClick: () => void;
+}
+
+const PdfThumbnailRenderer: React.FC<PdfThumbnailRendererProps> = ({
+  pdfDoc,
+  pageNumber,
+  rotation,
+  isActive,
+  onClick,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const renderTaskRef = useRef<pdfjsLib.RenderTask | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -76,31 +268,22 @@ const PdfPageRenderer: React.FC<PdfPageRendererProps> = ({
           setIsVisible(true);
         }
       },
-      { rootMargin: '800px 0px', threshold: 0 }
+      { rootMargin: '400px 0px', threshold: 0 }
     );
-    
     if (containerRef.current) observer.observe(containerRef.current);
-    
     return () => observer.disconnect();
   }, []);
 
   const renderPage = useCallback(async () => {
     if (!isVisible || !canvasRef.current) return;
-    
     try {
       const pageObj = await pdfDoc.getPage(pageNumber);
-      
-      let scale = 1.0;
       const baseRotation = pageObj.rotate || 0;
       const finalRotation = (baseRotation + rotation) % 360;
-      const viewport100 = pageObj.getViewport({ scale: 1.0, rotation: finalRotation });
       
-      if (zoom === 'auto') {
-        const containerWidth = wrapperWidth || 800;
-        scale = (containerWidth - 40) / viewport100.width;
-      } else {
-        scale = zoom / 100;
-      }
+      const viewport100 = pageObj.getViewport({ scale: 1.0, rotation: finalRotation });
+      const targetWidth = 140;
+      const scale = targetWidth / viewport100.width;
       
       const viewport = pageObj.getViewport({ scale, rotation: finalRotation });
       const canvas = canvasRef.current;
@@ -109,80 +292,36 @@ const PdfPageRenderer: React.FC<PdfPageRendererProps> = ({
       
       canvas.height = viewport.height;
       canvas.width = viewport.width;
-      
-      if (textLayerRef.current) {
-        textLayerRef.current.innerHTML = '';
-        textLayerRef.current.style.width = `${viewport.width}px`;
-        textLayerRef.current.style.height = `${viewport.height}px`;
-      }
 
       if (renderTaskRef.current) {
         renderTaskRef.current.cancel();
       }
       
-      const renderContext = {
+      const renderTask = pageObj.render({
         canvasContext: context,
         viewport: viewport,
-        canvas: canvas,
-      };
-      
-      const renderTask = pageObj.render(renderContext);
+      });
       renderTaskRef.current = renderTask;
       await renderTask.promise;
-      
-      if (onRenderComplete) {
-        onRenderComplete();
-      }
-
-      if (activeSearch && textLayerRef.current) {
-        const textContent = await pageObj.getTextContent();
-        const searchLower = activeSearch.toLowerCase();
-        
-        textContent.items.forEach((item: any) => {
-          if (item.str) {
-            const itemStrLower = item.str.toLowerCase();
-            let startIndex = 0;
-            let matchIndex = itemStrLower.indexOf(searchLower, startIndex);
-
-            while (matchIndex !== -1) {
-              const [x, y] = viewport.convertToViewportPoint(item.transform[4], item.transform[5]);
-              const fullWidth = item.width * viewport.scale;
-              const height = Math.abs(item.transform[3]) * viewport.scale * 1.2; 
-              
-              const charWidth = fullWidth / item.str.length;
-              const matchOffsetLeft = matchIndex * charWidth;
-              const matchWidth = searchLower.length * charWidth;
-              
-              const div = document.createElement('div');
-              div.className = 'pdf-search-highlight';
-              div.style.left = `${x + matchOffsetLeft}px`;
-              div.style.top = `${y - (height * 0.8)}px`; 
-              div.style.width = `${matchWidth}px`;
-              div.style.height = `${height}px`;
-              
-              textLayerRef.current?.appendChild(div);
-
-              startIndex = matchIndex + searchLower.length;
-              matchIndex = itemStrLower.indexOf(searchLower, startIndex);
-            }
-          }
-        });
-      }
     } catch (err: any) {
       if (err.name !== 'RenderingCancelledException') {
-        console.error('Render error:', err);
+        console.error('Thumbnail render error:', err);
       }
     }
-  }, [pdfDoc, pageNumber, zoom, activeSearch, isVisible, wrapperWidth, rotation, onRenderComplete]);
+  }, [pdfDoc, pageNumber, isVisible, rotation]);
 
   useEffect(() => {
     renderPage();
   }, [renderPage]);
 
   return (
-    <div ref={containerRef} id={`pdf-page-${pageNumber}`} className="pdf-page-container" data-page-number={pageNumber}>
-      <canvas ref={canvasRef} className="pdf-canvas" />
-      <div ref={textLayerRef} className="pdf-text-layer" />
+    <div 
+      ref={containerRef} 
+      className={`pdf-thumbnail-container ${isActive ? 'pdf-thumbnail-active' : ''}`}
+      onClick={onClick}
+    >
+      <canvas ref={canvasRef} className="pdf-thumbnail-canvas" />
+      <div className="pdf-thumbnail-page-number">{pageNumber}</div>
     </div>
   );
 };
@@ -222,6 +361,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
   const [searchInput, setSearchInput] = useState('');
   const [activeSearch, setActiveSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [showThumbnails, setShowThumbnails] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [wrapperWidth, setWrapperWidth] = useState(800);
@@ -399,6 +539,14 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
     <div ref={containerRef} className={`pdf-viewer ${themeClass}`}>
       <div className="pdf-header">
         <div className="pdf-header-left">
+          <button 
+            onClick={() => setShowThumbnails(!showThumbnails)}
+            className={`pdf-btn ${showThumbnails ? 'pdf-btn-active' : ''}`}
+            title="Toggle Thumbnails"
+          >
+            <PanelLeft size={18} />
+          </button>
+          <div className="pdf-divider"></div>
           <div className="pdf-search-container">
             <button 
               onClick={() => setShowSearch(!showSearch)}
@@ -581,8 +729,21 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
         </div>
       </div>
 
-      <div ref={wrapperRef} className="pdf-content-wrapper">
-        {isLoading && (
+      <div className="pdf-body">
+        <div className={`pdf-thumbnails-sidebar ${showThumbnails ? 'pdf-thumbnails-sidebar-open' : ''}`}>
+          {pdfDoc && Array.from({ length: totalPages }, (_, i) => (
+            <PdfThumbnailRenderer
+              key={`thumb-${i + 1}`}
+              pdfDoc={pdfDoc}
+              pageNumber={i + 1}
+              rotation={rotation}
+              isActive={page === i + 1}
+              onClick={() => scrollToPage(i + 1)}
+            />
+          ))}
+        </div>
+        <div ref={wrapperRef} className="pdf-content-wrapper">
+          {isLoading && (
           <div className="pdf-loading-overlay">
             <Loader2 className="pdf-spinner" />
             <p className="pdf-loading-text">{dict.loadingDocument}</p>
@@ -602,6 +763,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
             />
           ))}
         </div>
+      </div>
       </div>
       
       <div 
