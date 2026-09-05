@@ -570,13 +570,6 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
           >
             <PanelLeft size={18} />
           </button>
-          <button 
-            onClick={() => setIsBookMode(!isBookMode)}
-            className={`pdf-btn ${isBookMode ? 'pdf-btn-active' : ''}`}
-            title="Toggle Book Mode"
-          >
-            <BookOpen size={18} />
-          </button>
           <div className="pdf-divider"></div>
           <div className="pdf-search-container">
             <button 
@@ -601,7 +594,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
             )}
           </div>
           
-          <div className="pdf-pagination">
+          <div className={`pdf-pagination ${showSearch ? 'pdf-pagination-search-active' : ''}`}>
             <button 
               onClick={isRtl ? handleNextPage : handlePrevPage} 
               className="pdf-btn"
