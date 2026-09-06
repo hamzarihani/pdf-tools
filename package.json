@@ -1,0 +1,19 @@
+{
+  "name": "pdf-tools",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "build:packages": "npm run build --workspace=@pdf-file-tools/react-viewer",
+    "dev:docs": "npm run dev --workspace=docs",
+    "dev:playground": "npm run dev --workspace=playground",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-win32-x64-msvc": "^1.2.7"
+  }
+}
