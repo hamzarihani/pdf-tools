@@ -12,6 +12,10 @@
   box-sizing: border-box;
 }
 
+button, a, [role="button"] {
+  cursor: pointer;
+}
+
 body {
   margin: 0;
   background-color: var(--bg-color);
