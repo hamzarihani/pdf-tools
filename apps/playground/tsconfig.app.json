@@ -6,13 +6,11 @@
     "module": "esnext",
     "types": ["vite/client"],
     "allowArbitraryExtensions": true,
-    "skipLibCheck": true,
+    
 
     /* Bundler mode */
     "moduleResolution": "bundler",
-    "paths": {
-      "@pdf-file-tools/react-viewer": ["../../packages/react-viewer/dist"]
-    },
+    
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
