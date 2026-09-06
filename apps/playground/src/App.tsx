@@ -24,7 +24,7 @@ function App() {
             <h1>pdf-tools</h1>
           </div>
           <nav className="header-links">
-            <a href="http://localhost:5173" target="_blank" rel="noreferrer">Docs</a>
+            <a href="https://pdf-tools-docs.vercel.app/" target="_blank" rel="noreferrer">Docs</a>
             <a href="https://github.com/hamzarihani/pdf-tools" target="_blank" rel="noreferrer">GitHub</a>
           </nav>
         </div>

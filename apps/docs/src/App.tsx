@@ -12,6 +12,7 @@ function App() {
           <nav className="header-links">
             <a href="https://github.com/hamzarihani/pdf-tools" target="_blank" rel="noreferrer">GitHub</a>
             <a href="https://www.npmjs.com/package/@pdf-file-tools/react-viewer" target="_blank" rel="noreferrer">npm</a>
+            <a href="https://pdf-tools-playground.vercel.app/" target="_blank" rel="noreferrer">Playground</a>
           </nav>
         </div>
       </header>
