@@ -2,6 +2,8 @@
 
 A professional, responsive, and customizable PDF viewer for React applications, built on top of `pdfjs-dist`.
 
+**Repository:** [github.com/hamzarihani/pdf-tools](https://github.com/hamzarihani/pdf-tools)
+
 ## Features
 - Search text within the PDF
 - Zoom in/out, Page Fit
@@ -60,3 +62,7 @@ For optimal performance and stability across environments, provide the worker UR
   workerUrl={`https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`}
 />
 ```
+
+## Support
+
+If you find this component useful, please consider giving the [pdf-tools repository](https://github.com/hamzarihani/pdf-tools) a ⭐️ on GitHub! It helps the project grow and reach more developers.

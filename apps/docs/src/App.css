@@ -135,6 +135,7 @@ body {
   background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
   color: white;
   box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
+  cursor: pointer;
 }
 
 .btn-primary:hover {

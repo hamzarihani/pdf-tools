@@ -36,7 +36,7 @@ function App() {
             <h2>PDF Playground</h2>
             <p>Select any PDF file from your device to instantly preview it using the @pdf-file-tools/react-viewer component.</p>
             <div className="file-input-wrapper">
-              <button className="btn btn-primary">Choose PDF File</button>
+              <button className="btn btn-primary" style={{ position:'relative' }}>Choose PDF File</button>
               <input
                 type="file"
                 accept="application/pdf"

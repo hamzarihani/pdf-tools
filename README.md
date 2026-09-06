@@ -80,6 +80,10 @@ npm run dev:docs
 npm run dev:playground
 ```
 
+## Support
+
+If you find this project useful, please consider giving it a ⭐️ on GitHub! It helps the project grow and reach more developers.
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for details on how to get started.

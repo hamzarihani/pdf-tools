@@ -129,7 +129,6 @@ body {
 
 .file-input-wrapper {
   position: relative;
-  overflow: hidden;
   display: inline-block;
 }
 
@@ -140,6 +139,8 @@ body {
   top: 0;
   opacity: 0;
   cursor: pointer;
+  width: 100%;
+  height: 100%;
 }
 
 .btn {
@@ -158,11 +159,16 @@ body {
   background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
   color: white;
   box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
+  cursor: pointer;
 }
 
-.btn-primary:hover {
+.btn-primary:hover,
+.file-input-wrapper:hover .btn-primary,
+.file-input-wrapper input[type=file]:hover + .btn-primary,
+.file-input-wrapper input[type=file]:focus + .btn-primary {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+  cursor: pointer;
 }
 
 /* Viewer Section */
