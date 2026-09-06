@@ -1,0 +1,46 @@
+<svg viewBox="0 0 110 120" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Cyan to Blue Gradient for the Stem -->
+    <linearGradient id="gStem" x1="0" y1="0" x2="0" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#06b6d4" offset="0%" />
+      <stop stop-color="#2563eb" offset="100%" />
+    </linearGradient>
+
+    <!-- Purple to Pink Gradient for the P-Loop -->
+    <linearGradient id="gLoop" x1="12" y1="0" x2="110" y2="70" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8b5cf6" offset="0%" />
+      <stop stop-color="#ec4899" offset="100%" />
+    </linearGradient>
+
+    <!-- Light Pink Gradient for the Folded Corner -->
+    <linearGradient id="gFlap" x1="80" y1="0" x2="110" y2="30" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fbcfe8" offset="0%" />
+      <stop stop-color="#f472b6" offset="100%" />
+    </linearGradient>
+
+    <!-- Tight Drop Shadow for 3D Layering -->
+    <filter id="depth" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="-2" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Left Stem of the "P" -->
+  <rect x="0" y="0" width="25" height="120" rx="6" fill="url(#gStem)" />
+
+  <!-- The loop of the "P" doubling as the top of the document -->
+  <!-- The outer path has a diagonal cut for the fold, and an inner hole cutout -->
+  <path 
+    d="M 12 0 L 80 0 L 110 30 L 110 62 A 8 8 0 0 1 102 70 L 12 70 Z 
+       M 25 25 L 77 25 A 8 8 0 0 1 85 33 L 85 37 A 8 8 0 0 1 77 45 L 25 45 Z" 
+    fill-rule="evenodd" 
+    fill="url(#gLoop)" 
+    filter="url(#depth)" 
+  />
+
+  <!-- The Folded Document Corner (Triangle) -->
+  <polygon 
+    points="80,0 80,30 110,30" 
+    fill="url(#gFlap)" 
+    filter="url(#depth)" 
+  />
+</svg>
