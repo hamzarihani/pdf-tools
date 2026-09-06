@@ -42,6 +42,31 @@ const App = () => {
 
 export default App;
 ```
+## Custom translation / i18n
+
+`PdfViewer` supports runtime translation via the `dictionary` and `dictionaryMap` props.
+
+```tsx
+import { PdfViewer } from '@pdf-file-tools/react-viewer';
+import { useTranslation } from 'react-i18next';
+
+const { t } = useTranslation();
+
+const pdfViewerDict = {
+  search: t('rechercher'),
+  firstPage: t('premiere-page'),
+  lastPage: t('derniere-page'),
+  // …add any keys you need
+};
+
+const App = () => (
+  <PdfViewer
+    url="/sample.pdf"
+    title={t('My PDF')}
+    dictionary={pdfViewerDict}
+  />
+);
+```
 
 ## Development Setup
 

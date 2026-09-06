@@ -1,6 +1,6 @@
 {
   "name": "@pdf-file-tools/react-viewer",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "High-performance React component for viewing, navigating, and interacting with PDF documents with advanced features and a sleek UI.",
   "keywords": ["react", "pdf", "viewer", "pdfjs", "react-component", "pdf-tools", "document-viewer"],
   "license": "MIT",

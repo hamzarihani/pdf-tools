@@ -4,25 +4,7 @@ import { Search, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronsUp, ChevronsDo
 import * as pdfjsLib from 'pdfjs-dist';
 import './styles.css';
 
-export interface PdfViewerDictionary {
-  search: string;
-  searchPdf: string;
-  firstPage: string;
-  lastPage: string;
-  lightMode: string;
-  darkMode: string;
-  rotateCcw: string;
-  rotateCw: string;
-  documentInfo: string;
-  download: string;
-  print: string;
-  fileName: string;
-  pages: string;
-  author: string;
-  creator: string;
-  created: string;
-  loadingDocument: string;
-}
+export type PdfViewerDictionary = Record<string, string>;
 
 const defaultDictionary: PdfViewerDictionary = {
   search: 'Search',
@@ -43,6 +25,8 @@ const defaultDictionary: PdfViewerDictionary = {
   created: 'Created',
   loadingDocument: 'Loading Document...'
 };
+
+
 
 interface PdfPageRendererProps {
   pdfDoc: pdfjsLib.PDFDocumentProxy;
@@ -342,17 +326,31 @@ export interface PdfViewerProps {
   title: string;
   workerUrl?: string;
   dictionary?: Partial<PdfViewerDictionary>;
+  /**
+   * Mapping of language codes to dictionaries for i18n.
+   */
+  dictionaryMap?: Record<string, PdfViewerDictionary>;
+  /**
+   * Selected language code. If provided and present in dictionaryMap, its entries will override defaults.
+   */
+  language?: string;
   isRtl?: boolean;
 }
 
-export const PdfViewer: React.FC<PdfViewerProps> = ({ 
-  url, 
-  title, 
+export const PdfViewer: React.FC<PdfViewerProps> = ({
+  url,
+  title,
   workerUrl,
   dictionary: customDict,
+  dictionaryMap,
+  language,
   isRtl = false
 }) => {
-  const dict = { ...defaultDictionary, ...customDict };
+  const baseDict = { ...defaultDictionary, ...(customDict || {}) } as PdfViewerDictionary;
+  let dict: PdfViewerDictionary = baseDict;
+  if (language && dictionaryMap && dictionaryMap[language]) {
+    dict = { ...baseDict, ...dictionaryMap[language] };
+  }
 
   if (workerUrl) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
