@@ -19,6 +19,7 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
+    "prepare": "npm run build",
     "build": "tsup && tsc --emitDeclarationOnly",
     "dev": "tsup --watch"
   },
